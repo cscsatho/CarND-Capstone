@@ -11,7 +11,7 @@ This is the project repo for the final project of the Udacity Self-Driving Car N
 * Dénes Hogya
   hogyadenes@gmail.com
 
-* Shas Ganj
+* Shashidhara Ganjugunte
   jobshashigk@gmail.com
 
 * Wessam Morsy
