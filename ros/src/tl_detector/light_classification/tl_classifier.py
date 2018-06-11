@@ -16,6 +16,8 @@ class TLClassifier(object):
     def __init__(self, draw_box=False):
         self.draw_box = draw_box
         self.score_thresh = 0.5
+        self.skip_cnt = 0
+        self.max_cnt = 4
 
         curr_dir = os.path.dirname(os.path.realpath(__file__))
         model = curr_dir + '/model/frozen_inference_graph.pb'
@@ -54,52 +56,59 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        start = time.time()
+        
+        self.skip_cnt += 1
+        if self.skip_cnt >= self.max_cnt:
 
-        image_expanded = np.expand_dims(image, axis=0)
-        with self.graph.as_default():
-            (boxes, scores, classes, num) = self.sess.run(
-                [self.boxes, self.scores, self.classes, self.num_detections],
-                feed_dict={self.image_tensor: image_expanded})
+            start = time.time()
 
-        boxes = np.squeeze(boxes)
-        scores = np.squeeze(scores)
-        classes = np.squeeze(classes).astype(np.int32)
+            image_expanded = np.expand_dims(image, axis=0)
+            with self.graph.as_default():
+                (boxes, scores, classes, num) = self.sess.run(
+                    [self.boxes, self.scores, self.classes, self.num_detections],
+                    feed_dict={self.image_tensor: image_expanded})
 
-        if self.draw_box == True:
-            print((scores, classes))
+            boxes = np.squeeze(boxes)
+            scores = np.squeeze(scores)
+            classes = np.squeeze(classes).astype(np.int32)
 
-        lights = []
-        for i in range(boxes.shape[0]):
-            if scores[i] > self.score_thresh:
-                class_name = self.category_index[classes[i]]['name']
+            if self.draw_box == True:
+                print((scores, classes))
 
-                if class_name == 'Red':
-                    traffic_light = TrafficLight.RED
-                elif class_name == 'Green':
-                    traffic_light = TrafficLight.GREEN
-                elif class_name == 'Yellow':
-                    traffic_light = TrafficLight.YELLOW
+            lights = []
+            for i in range(boxes.shape[0]):
+                if scores[i] > self.score_thresh:
+                    class_name = self.category_index[classes[i]]['name']
 
-                lights.append(traffic_light)
+                    if class_name == 'Red':
+                        traffic_light = TrafficLight.RED
+                    elif class_name == 'Green':
+                        traffic_light = TrafficLight.GREEN
+                    elif class_name == 'Yellow':
+                        traffic_light = TrafficLight.YELLOW
 
-                if self.draw_box == True:
-                    boxlabel = '{}: {}%'.format(class_name, int(100*scores[i]))
-                    visualization_utils.draw_bounding_box_on_image_array(image,
-                        boxes[i][0], boxes[i][1],
-                        boxes[i][2], boxes[i][3],
-                        color=class_name,
-                        thickness=4,
-                        display_str_list=([boxlabel]),
-                        use_normalized_coordinates=True)
+                    lights.append(traffic_light)
+
+                    if self.draw_box == True:
+                        boxlabel = '{}: {}%'.format(class_name, int(100*scores[i]))
+                        visualization_utils.draw_bounding_box_on_image_array(image,
+                            boxes[i][0], boxes[i][1],
+                            boxes[i][2], boxes[i][3],
+                            color=class_name,
+                            thickness=4,
+                            display_str_list=([boxlabel]),
+                            use_normalized_coordinates=True)
 
 
-        if self.draw_box == True:
-            print('elapsed: ', time.time() - start)
-            self.last_image = image
+            if self.draw_box == True:
+                print('elapsed: ', time.time() - start)
+                self.last_image = image
 
-        lights.append(TrafficLight.UNKNOWN)
-        return most_common(lights)
+            lights.append(TrafficLight.UNKNOWN)
+            self.last_light = most_common(lights)
+            self.skip_cnt = 0
+
+        return self.last_light
 
 
 if __name__ == '__main__':
