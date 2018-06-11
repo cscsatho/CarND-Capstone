@@ -18,6 +18,7 @@ class TLClassifier(object):
         self.score_thresh = 0.5
         self.skip_cnt = 0
         self.max_cnt = 4
+        self.last_light = TrafficLight.UNKNOWN
 
         curr_dir = os.path.dirname(os.path.realpath(__file__))
         model = curr_dir + '/model/frozen_inference_graph.pb'
@@ -56,7 +57,7 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        
+
         self.skip_cnt += 1
         if self.skip_cnt >= self.max_cnt:
 
